@@ -1,1 +1,2136 @@
 hidfdfdf
+Launch.json
+
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            // Use IntelliSense to find out which attributes exist for C# debugging
+            // Use hover for the description of the existing attributes
+            // For further information visit https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md
+            "name": ".NET Core Launch (console)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            // If you have changed target frameworks, make sure to update the program path.
+            "program": "${workspaceFolder}/MyLibrary.Tests/bin/Debug/net7.0/MyLibrary.Tests.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/MyLibrary.Tests",
+            // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
+        {
+            "name": ".NET Core Attach",
+            "type": "coreclr",
+            "request": "attach"
+        }
+    ]
+}
+
+************************************
+
+settings.json
+
+{
+    
+    "dotnet-test-explorer.testProjectPath":"**/*Tests.csproj",
+    "dotnet-test-explorer.autoWatch": false,
+    
+}
+
+****************************************8
+
+
+tasks.json
+
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/MyLibrary.Tests/MyLibrary.Tests.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "publish",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "publish",
+                "${workspaceFolder}/MyLibrary.Tests/MyLibrary.Tests.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "watch",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "watch",
+                "run",
+                "--project",
+                "${workspaceFolder}/MyLibrary.Tests/MyLibrary.Tests.csproj"
+            ],
+            "problemMatcher": "$msCompile"
+        }
+    ]
+}
+
+************************************************************
+
+MyLibrary.Tests
+
+appsettings.json
+
+{
+"BrowserType": "CHROME"
+}
+
+********************************
+
+MyLibrary.Tests
+Usings.cs
+
+global using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+******************************************************8
+MyLibrary.Logging
+
+
+
+
+using System.Reflection;
+using AventStack.ExtentReports;
+using AventStack.ExtentReports.Reporter;
+using Microsoft.Extensions.Configuration;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+namespace MyLibrary.Logging
+{
+ 
+    public class Report
+    {
+        public static ExtentReports _extent =new ExtentReports();
+
+        
+        public static ExtentTest _test;
+
+        private static readonly IConfiguration Configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json")
+            .Build();
+        
+        
+        
+
+        public void InitiateReport()
+        {
+            //var reportPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            //var htmlReporter = new ExtentHtmlReporter(Path.Combine(reportPath, "TestResults\\TestReport.html"));
+
+            string workingDirectory = Environment.CurrentDirectory;
+            string projectDirectory = Directory.GetParent(workingDirectory).Parent.Parent.FullName;
+            string reportPath = projectDirectory + "\\TestResults\\index.html";
+            var htmlReporter = new ExtentHtmlReporter(reportPath);
+            htmlReporter.Config.ReportName="test.html";
+            
+            //var htmlReporter = new ExtentHtmlReporter(reportPath);
+            
+            
+            
+            
+           
+
+            //var htmlReporter = new ExtentHtmlReporter("TestResults\\extent-report.html");
+            
+            _extent = new ExtentReports();
+            _extent.AttachReporter(htmlReporter);
+            //_test = _extent.CreateTest("MyLibrary.Tests");
+        }
+
+        public void StartTest(TestContext testContext)
+        {
+            var testCategory=testContext.TestName.Split('_')[0];
+            //testContext.TestName
+            var a=_test;
+            //if(testContext.DataRow==null)
+            _test= _extent.CreateTest(testContext.TestName,testContext.TestName).AssignCategory(testCategory);
+            _test.Log(Status.Info,"Test Started New-");
+        }
+
+
+        
+    }
+}
+
+************************
+MyLibrary.Tests
+TestBase.cs
+
+using System.Configuration;
+using AventStack.ExtentReports;
+using Microsoft.Extensions.Configuration;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+using MyLibrary.Logging;
+using MyLibrary.Pages;
+using OpenQA.Selenium;
+using OpenQA.Selenium.Chrome;
+using OpenQA.Selenium.Edge;
+using OpenQA.Selenium.Firefox;
+
+namespace MyLibrary
+{
+    [TestClass]
+    public class TestBase:Report
+    {
+        public TestContext TestContext  { get; set; }
+        protected IWebDriver _driver;
+        
+
+        [TestInitialize]
+        public void StartTest()
+        {
+            StartTest(TestContext);
+            var config = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json")
+                .Build();
+
+            var _browserType = config["BrowserType"] ?? "CHROME";
+    
+            //BrowserType browserType=BrowserType.Chrome;
+            BrowserType browserType=BrowserType.Chrome;
+
+            switch (_browserType)
+            {
+                case "CHROME":
+                    browserType=BrowserType.Chrome;
+                    break;
+                case "IE":
+                    browserType=BrowserType.Edge;
+                    break;    
+                default:
+                    break;//throw new ArgumentOutOfRangeException(nameof(browserType), browserType, null);
+            }
+
+            switch (browserType)
+            {
+                case BrowserType.Chrome:
+                    _driver = new ChromeDriver();
+                    break;
+                case BrowserType.Firefox:
+                    _driver = new FirefoxDriver();
+                    break;
+                case BrowserType.Edge:
+                    _driver = new EdgeDriver();
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(browserType), browserType, null);
+            }
+            _driver.Manage().Timeouts().ImplicitWait=TimeSpan.FromSeconds(20);
+            _driver.Manage().Window.Maximize();
+        }
+
+        [TestCleanup]
+        public void TestCleanup()
+        {
+            var testStatus=TestContext.CurrentTestOutcome;
+            Status logStatus;
+            
+            DateTime time = DateTime.Now;
+            String fileName = "Screenshot " + time.ToString("h_mm_ss") + ".png";
+             switch (testStatus)
+             {
+                case UnitTestOutcome.Failed:
+                    logStatus=Status.Fail;
+                    //_test.Fail("Test Failed", captureScreenshot(_driver, fileName));
+                    TestResult tr=new TestResult(){Outcome=TestContext.CurrentTestOutcome};
+                    //tr.Outcome=TestContext.CurrentTestOutcome;
+                    TestFailed(TestContext,tr);
+                    break;
+                case UnitTestOutcome.Passed:
+                    logStatus=Status.Pass;
+                    //TestResult tr2=new TestResult(){Outcome=TestContext.CurrentTestOutcome};
+                    //tr.Outcome=TestContext.CurrentTestOutcome;
+                    //TestFailed(TestContext,tr2);
+                    break;
+                default:
+                   logStatus=Status.Pass;
+                    break;
+             }
+             _test.Log(logStatus,"Test Ended with status"+logStatus);
+             
+             _extent.Flush();
+             //_test
+            _test=null;
+             _driver.Quit();
+        }
+
+        public MediaEntityModelProvider captureScreenshot(IWebDriver driver, String screenshotName)
+        {
+            ITakesScreenshot ts = (ITakesScreenshot)driver;
+            var screenshot = ts.GetScreenshot().AsBase64EncodedString;
+
+            return MediaEntityBuilder.CreateScreenCaptureFromBase64String(screenshot, screenshotName).Build();
+        }
+
+        public void TestFailed(TestContext testContext, TestResult result)
+        {
+            //var fileName = $"{testContext.TestName}_{result.Outcome}_{result.EndTime:yyyy-MM-dd_HH-mm-ss}.png";
+            var fileName = $"{testContext.TestName}_{result.Outcome}_{DateTime.Now.ToString("yyyyMMddHHmmssffff")}.png";
+            //var filePath = Path.Combine(testContext.TestResultsDirectory, fileName);
+
+            string workingDirectory = Environment.CurrentDirectory;
+            string projectDirectory = Directory.GetParent(workingDirectory).Parent.Parent.FullName;
+            string reportPath = projectDirectory + "\\TestResults\\";
+            var filePath = Path.Combine(reportPath, fileName);
+
+            var screenshot = ((ITakesScreenshot)_driver).GetScreenshot();
+            screenshot.SaveAsFile(filePath, ScreenshotImageFormat.Png);
+        }
+
+        public void StartReport()
+        {
+            InitiateReport();
+        }
+        // [TestMethod]
+        // [DataRow("username1", "password1")]
+        // public void TestAddMethod(string username, string password)
+        // {
+        //     Class1 c1 = new Class1();
+        //     int result = c1.Add(Int32.Parse(username),(Int32.Parse(password)));
+        //     Assert.AreEqual(3, result);
+        // }
+
+        // //[DataTestMethod]
+        // [DataRow("a", "b")]
+        // [DataRow(" ", "a")]
+        // public void TestMethod1(string value1, string value2)
+        // {
+        //     Assert.AreEqual(value1 + value2, string.Concat(value1, value2));
+        // }
+    }
+}
+
+
+***********************************************
+
+MyLibrary
+BasePage.cs
+
+using OpenQA.Selenium;
+//using OpenQA.Selenium.Support.PageObjects;
+using SeleniumExtras.PageObjects;
+using AventStack.ExtentReports;
+using MyLibrary.Logging;
+
+namespace MyLibrary.Pages
+{
+    public abstract class BasePage :Report
+    {
+        protected readonly IWebDriver Driver;
+        //protected readonly ExtentTest Test;
+
+        protected BasePage(IWebDriver driver)
+        {
+            Driver = driver;
+            //Test = ExtentTestManager.GetCurrentTest();
+            PageFactory.InitElements(driver, this);
+        }
+    }
+
+
+    public enum BrowserType
+    {
+        Chrome,
+        Firefox,
+        Edge
+    }
+}
+
+
+********************************
+MyLibrary
+LoginPage.cs
+
+using OpenQA.Selenium;
+using SeleniumExtras.PageObjects;
+using OpenQA.Selenium.Interactions;
+using OpenQA.Selenium.Support.UI;
+using AventStack.ExtentReports;
+using MyLibrary.Logging;
+
+namespace MyLibrary.Pages
+{
+    public class LoginPage : BasePage
+    {
+        public LoginPage(IWebDriver driver) : base(driver)
+        {
+            
+        }
+
+        [FindsBy(How = How.XPath, Using = "//input[@id='UserName']")]
+        private IWebElement _usernameInput;
+
+        [FindsBy(How = How.Id, Using = "Password")]
+        private IWebElement _passwordInput;
+
+        [FindsBy(How = ((byte)How.Id), Using = "btnSubmit")]
+        private IWebElement _loginButton;
+
+        public void NavigatetoURL()
+        {
+            Driver.Navigate().GoToUrl("https://qaportal.synnexb2b.com.au:4443/");
+        }
+        
+
+        public void Login(string username, string password)
+        {
+            _test.Info("Login started");
+            //LogInfo($"Logging in with username: {username} and password: {password}");
+            _usernameInput.SendKeys(username);
+            _test.Info("username:"+username);
+            var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
+            wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath("//input[@id='UserName']")));
+            
+            _passwordInput.SendKeys(password);
+            _test.Info("password:"+password);
+            //var wait2 = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
+            wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.Id("Password")));
+            _test.Info("after pasword:");
+            wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.Id("btnSubmit")));
+            _test.Info("before Click");
+            _loginButton.Click();
+            Thread.Sleep(5000);
+            _test.Info("after Click");
+            _test.Info("Login Ended");
+            
+        }
+    }
+
+
+
+}
+
+
+**********************************
+MyLibrary.Tests
+LoginTest.cs
+
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using OpenQA.Selenium;
+using OpenQA.Selenium.Chrome;
+using MyLibrary.Pages;
+using System.Runtime.CompilerServices;
+using OpenQA.Selenium.Firefox;
+using OpenQA.Selenium.Edge;
+using System.ComponentModel.DataAnnotations;
+
+namespace MyLibrary.Tests
+{
+    [TestClass]
+    public class LoginTests : TestBase
+    {
+        
+
+    [AssemblyInitialize]
+   public static void OneTimeRun(TestContext tc)
+   {
+    TestBase testBase=new TestBase();
+    testBase.StartReport();
+
+   }
+
+   [ClassCleanup]
+   public static void Cleanup()
+   {
+    _extent.Flush();
+   }
+
+        // [TestInitialize]
+        // public void TestInitialize()
+        // {
+        //     _driver = new ChromeDriver();
+        //     _driver.Manage().Window.Maximize();
+        // }
+
+        
+        // [TestInitialize]
+        // public void TestInitialize(string testName = "", string browser = "Chrome")
+        // {
+        //     switch (browser)
+        //     {
+        //         case "Chrome":
+        //             _driver = new ChromeDriver();
+        //             break;
+        //         case "Firefox":
+        //             _driver = new FirefoxDriver();
+        //             break;
+        //         case "Edge":
+        //             _driver = new EdgeDriver();
+        //             break;
+        //         default:
+        //             throw new NotSupportedException($"{browser} is not supported.");
+        //     }
+
+        //      _driver.Manage().Window.Maximize();
+        // }
+
+
+
+        // [TestMethod]
+        
+        // //[DataRow(BrowserType.Firefox, "username", "password")]
+        // //[DataRow(BrowserType.Edge, "username", "password")]
+        // public void Login_ValidCredentials_Success(BrowserType browserType, string username, string password)
+        // {
+        //     var loginPage = new LoginPage(_driver);            
+
+        //     _driver.Navigate().GoToUrl("https://qaportal.synnexb2b.com.au:4443/");
+
+        //     loginPage.Login(username, password);
+
+        //     //Assert.AreEqual("https://example.com/dashboard", _driver.Url);
+        // }
+
+        // [TestMethod]
+        // //[DataRow("Chrome")]
+        // //[DataRow("Firefox")]
+        // //[DataRow("Edge")]
+        // public void Login_ValidCredentials_Success(string browser)
+        // {
+        //     //TestInitialize(testName: "Login_ValidCredentials_Success", browser: "Chrome");
+
+        //     var loginPage = new LoginPage(_driver);
+
+        //     _driver.Navigate().GoToUrl("https://qaportal.synnexb2b.com.au:4443/");
+
+        
+
+        //     //Assert.AreEqual("https://example.com/dashboard", _driver.Url);
+        // }
+
+        // [TestMethod]
+        // public void Login_ValidCredentials_Success()
+        // {
+        //     var loginPage = new LoginPage(_driver);
+
+        //     _driver.Navigate().GoToUrl("https://qaportal.synnexb2b.com.au:4443/");
+             
+        
+
+        //     //Assert.AreEqual("https://example.com/dashboard", _driver.Url);
+        // }
+
+        [TestMethod,Description("Login_ValidCredentials_Success")]
+        //[DataRow("pivital", "")]
+        //[DataRow("pivital", "")]
+        [DynamicData(nameof(UserData),DynamicDataSourceType.Method)]
+        //[DataRow("username2", "password2")]
+        //public void Login_ValidCredentials_Success(string username, string password)
+        public void Login_ValidCredentials_Success(string username, string password)
+        {
+            //TestInitialize(browserType);
+
+            var loginPage = new LoginPage(_driver);
+
+            //_driver.Navigate().GoToUrl("https://qaportal.synnexb2b.com.au:4443/");
+            loginPage.NavigatetoURL();
+
+            loginPage.Login(username, password);
+            //loginPage.Login((string)inputs[0], (string)inputs[1]);
+
+            //Assert.AreEqual("https://example.com/dashboard", _driver.Url);
+            Assert.IsTrue(_driver.FindElement(By.Id("dropdownMenuButton2")).Displayed,"Dropdown menu is not displayed");      
+        }
+        
+        public static IEnumerable<object[]> UserData()
+        {
+            yield return new object[] { "pivital", "" };
+            //yield return new object[] { "pivital", ""};
+            // get
+            // {
+            //     return new[]
+            //     { 
+            //         new object[] { "pivital", ""},
+            //         new object[] { "pivital", "" },
+                    
+            //     };
+            // }
+        }
+
+    }
+    
+
+
+/*
+public class LoginTests
+    {
+        private IWebDriver _driver;
+
+
+
+        // [TestInitialize]
+        // public void TestInitialize()
+        // {
+        //     _driver = new ChromeDriver();
+        //     _driver.Manage().Window.Maximize();
+        // }
+
+        [TestInitialize]
+        public void TestInitialize()
+        {
+            //var browser = Environment.GetEnvironmentVariable("BROWSER")?.ToLower();
+            BrowserType browserType=BrowserType.Chrome;
+
+            switch (browserType)
+            {
+                case BrowserType.Chrome:
+                    _driver = new ChromeDriver();
+                    break;
+                case BrowserType.Firefox:
+                    _driver = new FirefoxDriver();
+                    break;
+                case BrowserType.Edge:
+                    _driver = new EdgeDriver();
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(browserType), browserType, null);
+            }
+            _driver.Manage().Window.Maximize();
+        }
+        // [TestInitialize]
+        // public void TestInitialize(string testName = "", string browser = "Chrome")
+        // {
+        //     switch (browser)
+        //     {
+        //         case "Chrome":
+        //             _driver = new ChromeDriver();
+        //             break;
+        //         case "Firefox":
+        //             _driver = new FirefoxDriver();
+        //             break;
+        //         case "Edge":
+        //             _driver = new EdgeDriver();
+        //             break;
+        //         default:
+        //             throw new NotSupportedException($"{browser} is not supported.");
+        //     }
+
+        //      _driver.Manage().Window.Maximize();
+        // }
+
+        [TestCleanup]
+        public void TestCleanup()
+        {
+            _driver.Quit();
+        }
+
+
+        // [TestMethod]
+        
+        // //[DataRow(BrowserType.Firefox, "username", "password")]
+        // //[DataRow(BrowserType.Edge, "username", "password")]
+        // public void Login_ValidCredentials_Success(BrowserType browserType, string username, string password)
+        // {
+        //     var loginPage = new LoginPage(_driver);            
+
+        //     _driver.Navigate().GoToUrl("https://qaportal.synnexb2b.com.au:4443/");
+
+        //     loginPage.Login(username, password);
+
+        //     //Assert.AreEqual("https://example.com/dashboard", _driver.Url);
+        // }
+
+        // [TestMethod]
+        // //[DataRow("Chrome")]
+        // //[DataRow("Firefox")]
+        // //[DataRow("Edge")]
+        // public void Login_ValidCredentials_Success(string browser)
+        // {
+        //     //TestInitialize(testName: "Login_ValidCredentials_Success", browser: "Chrome");
+
+        //     var loginPage = new LoginPage(_driver);
+
+        //     _driver.Navigate().GoToUrl("https://qaportal.synnexb2b.com.au:4443/");
+
+        
+
+        //     //Assert.AreEqual("https://example.com/dashboard", _driver.Url);
+        // }
+
+        // [TestMethod]
+        // public void Login_ValidCredentials_Success()
+        // {
+        //     var loginPage = new LoginPage(_driver);
+
+        //     _driver.Navigate().GoToUrl("https://qaportal.synnexb2b.com.au:4443/");
+             
+        
+
+        //     //Assert.AreEqual("https://example.com/dashboard", _driver.Url);
+        // }
+
+        [TestMethod]
+        
+        //[DataRow("username2", "password2")]
+        public void Login_ValidCredentials_Success(string username, string password)
+        {
+            //TestInitialize(browserType);
+
+            var loginPage = new LoginPage(_driver);
+
+            _driver.Navigate().GoToUrl("https://qaportal.synnexb2b.com.au:4443/");
+
+            loginPage.Login(username, password);
+
+            //Assert.AreEqual("https://example.com/dashboard", _driver.Url);
+        }
+
+    }
+}
+*/
+
+}
+**************************************************
+
+MyLibrary.Logging
+ExtentManager.cs
+
+
+
+using System.Reflection;
+using AventStack.ExtentReports;
+using AventStack.ExtentReports.Reporter;
+using Microsoft.Extensions.Configuration;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+namespace MyLibrary.Logging
+{
+ 
+    public class Report
+    {
+        public static ExtentReports _extent =new ExtentReports();
+
+        
+        public static ExtentTest _test;
+
+        private static readonly IConfiguration Configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json")
+            .Build();
+        
+        
+        
+
+        public void InitiateReport()
+        {
+            //var reportPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            //var htmlReporter = new ExtentHtmlReporter(Path.Combine(reportPath, "TestResults\\TestReport.html"));
+
+            string workingDirectory = Environment.CurrentDirectory;
+            string projectDirectory = Directory.GetParent(workingDirectory).Parent.Parent.FullName;
+            string reportPath = projectDirectory + "\\TestResults\\index.html";
+            var htmlReporter = new ExtentHtmlReporter(reportPath);
+            htmlReporter.Config.ReportName="test.html";
+            
+            //var htmlReporter = new ExtentHtmlReporter(reportPath);
+            
+            
+            
+            
+           
+
+            //var htmlReporter = new ExtentHtmlReporter("TestResults\\extent-report.html");
+            
+            _extent = new ExtentReports();
+            _extent.AttachReporter(htmlReporter);
+            //_test = _extent.CreateTest("MyLibrary.Tests");
+        }
+
+        public void StartTest(TestContext testContext)
+        {
+            var testCategory=testContext.TestName.Split('_')[0];
+            //testContext.TestName
+            var a=_test;
+            //if(testContext.DataRow==null)
+            _test= _extent.CreateTest(testContext.TestName,testContext.TestName).AssignCategory(testCategory);
+            _test.Log(Status.Info,"Test Started New-");
+        }
+
+
+        
+    }
+}
+
+*********************************
+MyLibrary.Logging .csprjo file
+
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ExtentReports" Version="4.1.0" />
+    <PackageReference Include="ExtentReports.Core" Version="1.0.3" />
+    <PackageReference Include="MSTest.TestAdapter" Version="3.0.2" />
+    <PackageReference Include="MSTest.TestFramework" Version="3.0.2" />
+  </ItemGroup>
+
+</Project>
+
+
+*************************************************
+MyLibrary.csproj
+
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AutoItX.Dotnet" Version="3.3.14.5" />
+    <PackageReference Include="DotNetSeleniumExtras.PageObjects.Core" Version="4.3.0" />
+    <PackageReference Include="DotNetSeleniumExtras.WaitHelpers" Version="3.11.0" />
+    <PackageReference Include="ExtentReports" Version="4.1.0" />
+    <PackageReference Include="ExtentReports.Core" Version="1.0.3" />
+    <PackageReference Include="Protractor" Version="1.0.0" />
+    <PackageReference Include="Selenium.Support" Version="4.9.1" />
+    <PackageReference Include="Selenium.WebDriver" Version="4.9.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MyLibrary.Logging\MyLibrary.Logging.csproj" />
+  </ItemGroup>
+
+</Project>
+
+***************************************
+MyLibrary.Tests.csproj
+
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.5.0" />
+    <PackageReference Include="MSTest.TestAdapter" Version="3.0.2" />
+    <PackageReference Include="MSTest.TestFramework" Version="3.0.2" />
+    <PackageReference Include="coverlet.collector" Version="3.2.0" />
+    <PackageReference Include="Selenium.WebDriver" Version="4.9.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+  <None Include="appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  <Content Include="TestResults\**">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <ProjectReference Include="..\MyLibrary.Logging\MyLibrary.Logging.csproj" />
+    <ProjectReference Include="..\MyLibrary\MyLibrary.csproj" />
+  </ItemGroup>
+
+</Project>
+
+
+********************************************************
+test cases
+
+1)ChkOutDDLSelectTests_1
+2)SerachAutoCompleteTxtBoxTests_1
+3)SelectorshubTests_1
+
+MyLibrary.Tests
+SelectorshubTests.cs
+
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using OpenQA.Selenium;
+using OpenQA.Selenium.Chrome;
+using MyLibrary.Pages;
+using System.Runtime.CompilerServices;
+using OpenQA.Selenium.Firefox;
+using OpenQA.Selenium.Edge;
+using System.ComponentModel.DataAnnotations;
+
+namespace MyLibrary.Tests
+{
+    [TestClass]
+    public class SelectorshubTests : TestBase
+    {
+        
+        [TestMethod,Description("ChkOutDDLSelectTests_1")]
+        public void ChkOutDDLSelectTests_1()
+        {
+            var chkDDl=new SelectorshubDashBoardPage(_driver);
+            chkDDl.NavigatetoURL();
+            chkDDl.DatePicker();
+            //chkDDl.ChkOutDDL("Join Training");
+        }
+
+        [TestMethod,Description("SerachAutoCompleteTxtBoxTests_1")]
+        public void SerachAutoCompleteTxtBoxTests_1()
+        {
+            var _search=new SelectorshubDashBoardPage(_driver);
+            _search.NavigatetoURL();
+            _search.SerachAutoCompleteTxtBox("den");
+        }
+
+        [TestMethod,Description("SelectorshubTests_1")]        
+        public void SelectorshubTests_1()
+        {
+            //TestInitialize(browserType);
+
+            var loginPage = new SelectorshubDashBoardPage(_driver);
+
+            //_driver.Navigate().GoToUrl("https://qaportal.synnexb2b.com.au:4443/");
+            loginPage.NavigatetoURL();
+
+            loginPage.DashboardDDL();
+        }
+
+        
+        private static IEnumerable<object[]> UserData()
+        {
+            yield return new object[] { "vinaykumar562018@gmail.com", "Vinay@123" };
+            //yield return new object[] { "pivital", ""};
+            // get
+            // {
+            //     return new[]
+            //     { 
+            //         new object[] { "pivital", ""},
+            //         new object[] { "pivital", "" },
+                    
+            //     };
+            // }
+        }
+    }
+}
+    
+***************************************************************
+
+MyLibrary-->Selectorshub-->SelectorshubPage.cs
+
+
+
+using OpenQA.Selenium;
+using SeleniumExtras.PageObjects;
+using OpenQA.Selenium.Interactions;
+using OpenQA.Selenium.Support.UI;
+using AventStack.ExtentReports;
+using MyLibrary.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Diagnostics;
+
+
+
+namespace MyLibrary.Pages
+{
+    public class SelectorshubDashBoardPage : SelectorshubBasePage
+    {
+        public SelectorshubDashBoardPage(IWebDriver driver) : base(driver)
+        {
+            
+        }
+
+        [FindsBy(How = How.XPath, Using = "//a[@class='hfe-menu-item' and contains(text(),'Products')]")]
+        private IWebElement producstDDL;
+
+        [FindsBy(How = How.XPath, Using = "//a[@class='hfe-menu-item' and contains(text(),'Pro Plans')]")]
+        private IWebElement proPlansDDL;
+
+        [FindsBy(How = (How.XPath), Using = "//a[@class='hfe-menu-item' and contains(text(),'Pro Plans')]")]
+        private IWebElement coursesLink;
+
+        [FindsBy(How = How.XPath, Using = "//*[@id='tablepress-1_wrapper']//*[@type='search']")]
+         private IWebElement search;
+
+        ////*[@class='dropdown']//*[@class='dropdown-content']//a
+
+
+        [FindsBy(How = How.XPath, Using = "//*[@class='dropdown']")]
+        //"//*[@class='dropdown']//*[@class='dropdown-content']")]
+         private IWebElement chkOutDDL;
+
+         ////*[@type='date']
+         [FindsBy(How = How.XPath, Using = "//*[@type='date']")]
+        //"//*[@class='dropdown']//*[@class='dropdown-content']")]
+         private IWebElement datePicker;
+
+        public void NavigatetoURL()
+        {
+            Driver.Navigate().GoToUrl(BaseURL);
+        }
+        
+        public void DatePicker()
+        {
+            //IJavaScriptExecutor js = (IJavaScriptExecutor) Driver;
+            
+            datePicker.SendKeys("12/12/2022");
+            Thread.Sleep(5000);
+            //js.ExecuteScript("arguments[0].value = arguments[1]",
+        }
+        public void ChkOutDDL(string selection)
+        {
+            _test.Info("ChkOutDDL started");
+            Actions actions=new Actions(Driver);
+            var wait=new WebDriverWait(Driver,TimeSpan.FromSeconds(30));
+            wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath("//*[@class='dropdown']")));
+
+            IJavaScriptExecutor js = (IJavaScriptExecutor) Driver;
+            //js.ExecuteScript("script to execute");            
+            js.ExecuteScript("window.scrollBy(0,250)", "");
+
+            actions.MoveToElement(chkOutDDL).Perform();
+
+
+            IList<IWebElement> ddl=chkOutDDL.FindElements(By.XPath("//*[@class='dropdown-content']//a"));
+
+            foreach (var item in ddl)
+            {
+                if(item.Text==selection)
+                {
+                    item.Click();
+                }
+            }
+            _test.Info("ChkOutDDL ended");
+        }
+
+        public void SerachAutoCompleteTxtBox(string searchText)
+        {
+            _test.Info("SerachAutoCompleteTxtBox started");
+
+            
+            var wait=new WebDriverWait(Driver,TimeSpan.FromSeconds(30));
+            wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath("//*[@id='tablepress-1_wrapper']//*[@type='search']")));
+            search.SendKeys(searchText);
+            
+            wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath("//*[@id='tablepress-1']")));
+            // xpath of html table
+			var elemTable =	Driver.FindElement(By.XPath("//*[@id='tablepress-1']"));
+
+			// Fetch all Row of the table
+			List<IWebElement> lstTrElem = new List<IWebElement>(elemTable.FindElements(By.TagName("tr")));
+			String strRowData = "";
+
+            // Traverse each row
+			foreach (var elemTr in lstTrElem)
+			{
+				// Fetch the columns from a particuler row
+				List<IWebElement> lstTdElem = new List<IWebElement>(elemTr.FindElements(By.TagName("td")));
+				if (lstTdElem.Count > 0)
+				{
+                    bool ser=false;
+					// Traverse each column
+					foreach (var elemTd in lstTdElem)
+					{
+                        if(elemTd.Text.ToLower().Contains(searchText))
+                        {
+                            ser=true;
+                            break;
+                        }
+						// "\t\t" is used for Tab Space between two Text
+						strRowData = strRowData + elemTd.Text + "\t\t";
+					}
+
+                    if(!ser)
+                    {
+                        Assert.Fail();
+                    }
+				}
+				else
+				{
+					// To print the data into the console
+					Console.WriteLine("This is Header Row");
+					Console.WriteLine(lstTrElem[0].Text.Replace(" ", "\t\t"));
+				}
+				Console.WriteLine(strRowData);
+				strRowData = String.Empty;
+			}
+            // wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath("//*[@id='tablepress-1']//tbody//tr")));
+            // IList<IWebElement> list=Driver.FindElements(By.XPath("//*[@id='tablepress-1']//tbody//tr"));
+            // IList<IWebElement> rowTD;
+
+            // foreach (IWebElement row in list)
+            // {
+            //     rowTD = row.FindElements(By.TagName("td"));
+            //     if(rowTD.Count > 0)
+            //     {
+            //         foreach (var item in rowTD)
+            //         {
+            //             var b=item.Text;
+            //         }
+            //         if((rowTD[rowTD.Count-1].Text.Contains("den")))
+            //         {
+                        
+            //         }
+            //         else
+            //         {
+            //             var a=rowTD[1].Text;
+            //             Assert.Fail();
+            //             break;
+            //         }
+            //         //test failed
+            //     }
+            // }
+
+            _test.Info("SerachAutoCompleteTxtBox ended");
+
+        }
+
+        
+        public  void waitForElementtoExixt(IWebDriver driver, By by, int timeoutInSeconds)
+        {
+                var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(timeoutInSeconds));
+                wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(by));
+        }
+    
+
+        public  void SelectItemByText(IWebElement element,By by,int waitforElementinSec, string textToSelect) 
+		{ 
+            IWebElement element_=Driver.FindElement(by);
+			waitForElementtoExixt(Driver,by,waitforElementinSec); 
+			SelectElement dropdown = new SelectElement(element_); 
+			dropdown.SelectByText(textToSelect); 
+		}
+
+        public  void SelectItemByText(IWebElement element, string textToSelect) 
+		{ 
+            //IWebElement element_=Driver.FindElement(by);
+			//waitForElementtoExixt(Driver,by,waitforElementinSec); 
+			SelectElement dropdown = new SelectElement(element); 
+			dropdown.SelectByText(textToSelect); 
+		}
+    
+
+        public void DashboardDDL()
+        {
+            _test.Info("DashboardDDL started");
+            //LogInfo($"Logging in with username: {username} and password: {password}");
+            //_usernameInput.SendKeys(username);
+            //_test.Info("username:"+username);
+            //var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
+            //wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath("//input[@type='email' and @placeholder='Email Address' and @data-qa='login-email']")));
+             waitForElementtoExixt(Driver,By.XPath("//a[@class='hfe-menu-item' and contains(text(),'Products')]"),30);
+             producstDDL.Click();
+            //SelectItemByText(producstDDL,By.XPath("//a[@class='hfe-menu-item' and contains(text(),'Products')]"),20,"");
+            waitForElementtoExixt(Driver,By.XPath("//a[@class='hfe-menu-item' and contains(text(),'Products')]//following::a"),30);
+            var eleList= Driver.FindElements(By.XPath("//a[@class='hfe-menu-item' and contains(text(),'Products')]//following::a"));
+            
+            IList<IWebElement> all = eleList;
+
+            String[] allText = new String[all.Count];
+            int i = 0;
+            foreach (IWebElement element in all)
+            {
+                string _text="SelectorsHub";
+                if(element.Text==_text)
+                {
+                    element.Click();
+                    break;
+                }
+                allText[i++] = element.Text;
+                _test.Info("The products are "+i+":"+ element.Text);
+
+            }
+            
+           Thread.Sleep(5000);
+            //SelectItemByText(ele,"SelectorsHub");
+            _test.Info("DashboardDDL Ended");
+           // producstDDL
+            //_passwordInput.SendKeys(password);
+            // _test.Info("password:"+password);
+            // //var wait2 = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
+            // wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath("//input[@type='password']")));
+            // _test.Info("after pasword:");
+            // wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath("//button[@type='submit' and text() = 'Login']")));
+            // _test.Info("before Click");
+            // _loginButton.Click();
+            // Thread.Sleep(5000);
+            // wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath("//div[contains(@class, 'shop-menu')]//*[contains(@class,'fa-user')]//following-sibling::b")));
+
+            // Assert.IsTrue(Driver.FindElement(By.XPath("//div[contains(@class, 'shop-menu')]//*[contains(@class,'fa-user')]//following-sibling::b")).Text=="vinay");      
+            // ////div[contains(@class, 'shop-menu')]//*[contains(@class,'fa-user')]//following-sibling::b
+            // _test.Info("after Click");
+            // _test.Info("Login Ended");
+            
+        }
+    }
+
+
+
+}
+
+********************************************************************************8
+
+
+MyLibrary
+SelectorshubBasePage.cs
+
+using OpenQA.Selenium;
+//using OpenQA.Selenium.Support.PageObjects;
+using SeleniumExtras.PageObjects;
+using AventStack.ExtentReports;
+using MyLibrary.Logging;
+
+namespace MyLibrary.Pages
+{
+    public abstract class SelectorshubBasePage :Report
+    {
+        protected readonly IWebDriver Driver;
+        //protected readonly ExtentTest Test;
+        protected readonly string BaseURL="https://selectorshub.com/xpath-practice-page/";
+        protected SelectorshubBasePage(IWebDriver driver)
+        {
+            Driver = driver;
+            //Test = ExtentTestManager.GetCurrentTest();
+            PageFactory.InitElements(driver, this);
+        }
+    }
+}
+
+
+
+
+
+***************************************************
+
+Testcase 
+1) IframescenarioPageTests_1
+
+MyLibrary.Tests
+
+IframescenarioPageTests.cs
+
+
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using OpenQA.Selenium;
+using OpenQA.Selenium.Chrome;
+using MyLibrary.Pages;
+using System.Runtime.CompilerServices;
+using OpenQA.Selenium.Firefox;
+using OpenQA.Selenium.Edge;
+using System.ComponentModel.DataAnnotations;
+
+namespace MyLibrary.Tests
+{
+    [TestClass]
+    public class IframescenarioPageTests : TestBase
+    {
+        
+
+        [TestMethod,Description("IframescenarioPageTests_1")]        
+        public void IframescenarioPageTests_1()
+        {
+            //TestInitialize(browserType);
+
+            var loginPage = new IframescenarioPage(_driver);
+
+            
+            loginPage.NavigatetoURL();
+
+            loginPage.IframescenarioInput();
+        }
+
+    }
+}
+
+
+***************************************************************
+MyLibrary-->selectorshub
+IframescenarioPage.cs
+
+using OpenQA.Selenium;
+using SeleniumExtras.PageObjects;
+using OpenQA.Selenium.Interactions;
+using OpenQA.Selenium.Support.UI;
+using AventStack.ExtentReports;
+using MyLibrary.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Diagnostics;
+
+
+
+namespace MyLibrary.Pages
+{
+    public class IframescenarioPage : IframescenarioBasePage
+    {
+        public IframescenarioPage(IWebDriver driver) : base(driver)
+        {
+            
+        }
+
+        
+
+        // [FindsBy(How = How.XPath, Using = "//*[@id='lost']")]
+        // private IWebElement btnLost;
+
+       
+        public void NavigatetoURL()
+        {
+            Driver.Navigate().GoToUrl(BaseURL);
+        }
+        
+        
+        public  void waitForElementtoExixt(IWebDriver driver, By by, int timeoutInSeconds)
+        {
+                var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(timeoutInSeconds));
+                wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(by));
+        }
+    
+
+        
+    
+        public void IframescenarioInput()
+        {
+            _test.Info("DashboardDDL started");
+            //LogInfo($"Logging in with username: {username} and password: {password}");
+            //_usernameInput.SendKeys(username);
+            //_test.Info("username:"+username);
+            //var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(30));
+            //wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath("//*[@id='pact1']")));
+             //Driver.switchTo().frame("pact1");
+             Driver.SwitchTo().Frame("pact1");
+             IJavaScriptExecutor jsExecutor = (IJavaScriptExecutor)Driver;
+            var currentFrame = jsExecutor.ExecuteScript("return self.id");
+             _test.Info("IframeID"+ currentFrame);
+             waitForElementtoExixt(Driver,By.XPath("//*[@id='inp_val']"),30);
+             Assert.IsTrue(Driver.FindElement(By.XPath("//*[@id='inp_val']"))!=null);
+             IWebElement ele= Driver.FindElement(By.XPath("//*[@id='inp_val']"));
+             ele.SendKeys("vinay");
+             _test.Info("Found the memory test text box");
+            // memoryTest.SendKeys("Vinay");
+            //SelectItemByText(producstDDL,By.XPath("//a[@class='hfe-menu-item' and contains(text(),'Products')]"),20,"");
+            
+            
+           Thread.Sleep(5000);
+            //SelectItemByText(ele,"SelectorsHub");
+            _test.Info("DashboardDDL Ended");
+           // producstDDL
+            //_passwordInput.SendKeys(password);
+            // _test.Info("password:"+password);
+            // //var wait2 = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
+            // wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath("//input[@type='password']")));
+            // _test.Info("after pasword:");
+            // wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath("//button[@type='submit' and text() = 'Login']")));
+            // _test.Info("before Click");
+            // _loginButton.Click();
+            // Thread.Sleep(5000);
+            // wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath("//div[contains(@class, 'shop-menu')]//*[contains(@class,'fa-user')]//following-sibling::b")));
+
+            // Assert.IsTrue(Driver.FindElement(By.XPath("//div[contains(@class, 'shop-menu')]//*[contains(@class,'fa-user')]//following-sibling::b")).Text=="vinay");      
+            // ////div[contains(@class, 'shop-menu')]//*[contains(@class,'fa-user')]//following-sibling::b
+            // _test.Info("after Click");
+            // _test.Info("Login Ended");
+            
+        }
+    }
+
+
+
+}
+
+*****************************************
+IframescenarioBasePage.cs
+
+using OpenQA.Selenium;
+//using OpenQA.Selenium.Support.PageObjects;
+using SeleniumExtras.PageObjects;
+using AventStack.ExtentReports;
+using MyLibrary.Logging;
+
+namespace MyLibrary.Pages
+{
+    public abstract class IframescenarioBasePage :Report
+    {
+        protected readonly IWebDriver Driver;
+        //protected readonly ExtentTest Test;
+        protected readonly string BaseURL="https://selectorshub.com/iframe-scenario/";
+        protected IframescenarioBasePage(IWebDriver driver)
+        {
+            Driver = driver;
+            //Test = ExtentTestManager.GetCurrentTest();
+            PageFactory.InitElements(driver, this);
+        }
+    }
+}
+
+
+*******************************************************8
+
+
+Testcase 
+
+1) AutomationexerciseLogin_ValidCredentials_Success
+
+MyLibrary.Tests
+AutomationexerciseLoginTests.cs
+
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using OpenQA.Selenium;
+using OpenQA.Selenium.Chrome;
+using MyLibrary.Pages;
+using System.Runtime.CompilerServices;
+using OpenQA.Selenium.Firefox;
+using OpenQA.Selenium.Edge;
+using System.ComponentModel.DataAnnotations;
+
+namespace MyLibrary.Tests
+{
+    [TestClass]
+    public class AutomationexerciseLoginLoginTests : TestBase
+    {
+        
+
+        [TestMethod,Description("AutomationexerciseLogin_ValidCredentials_Success")]
+        [DynamicData(nameof(UserData),DynamicDataSourceType.Method)]
+        //[DataRow("username2", "password2")]
+        //public void Login_ValidCredentials_Success(string username, string password)
+        public void AutomationexerciseLogin_ValidCredentials_Success(string username, string password)
+        {
+            //TestInitialize(browserType);
+
+            var loginPage = new AutomationexerciseLoginPage(_driver);
+
+            //_driver.Navigate().GoToUrl("https://qaportal.synnexb2b.com.au:4443/");
+            loginPage.NavigatetoURL();
+
+            loginPage.AutomationexerciseLogin(username, password);
+        }
+
+        
+        private static IEnumerable<object[]> UserData()
+        {
+            yield return new object[] { "vinaykumar562018@gmail.com", "Vinay@123" };
+            //yield return new object[] { "pivital", ""};
+            // get
+            // {
+            //     return new[]
+            //     { 
+            //         new object[] { "pivital", ""},
+            //         new object[] { "pivital", "" },
+                    
+            //     };
+            // }
+        }
+    }
+}
+    
+*******************************************************
+
+MyLibrary-->Automationexercise
+AutomationexerciseLoginPage.cs
+
+
+using OpenQA.Selenium;
+using SeleniumExtras.PageObjects;
+using OpenQA.Selenium.Interactions;
+using OpenQA.Selenium.Support.UI;
+using AventStack.ExtentReports;
+using MyLibrary.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+namespace MyLibrary.Pages
+{
+    public class AutomationexerciseLoginPage : AutomationexerciseLoginPageBasePage
+    {
+        public AutomationexerciseLoginPage(IWebDriver driver) : base(driver)
+        {
+            
+        }
+
+        [FindsBy(How = How.XPath, Using = "//input[@type='email' and @placeholder='Email Address' and @data-qa='login-email']")]
+        private IWebElement _usernameInput;
+
+        [FindsBy(How = How.XPath, Using = "//input[@type='password']")]
+        private IWebElement _passwordInput;
+
+        [FindsBy(How = (How.XPath), Using = "//button[@type='submit' and text() = 'Login']")]
+        private IWebElement _loginButton;
+
+        public void NavigatetoURL()
+        {
+            Driver.Navigate().GoToUrl(BaseURL+"login");
+        }
+        
+        
+
+        public void AutomationexerciseLogin(string username, string password)
+        {
+            _test.Info("Login started");
+            //LogInfo($"Logging in with username: {username} and password: {password}");
+            _usernameInput.SendKeys(username);
+            _test.Info("username:"+username);
+            var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
+            wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath("//input[@type='email' and @placeholder='Email Address' and @data-qa='login-email']")));
+            
+            _passwordInput.SendKeys(password);
+            _test.Info("password:"+password);
+            //var wait2 = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
+            wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath("//input[@type='password']")));
+            _test.Info("after pasword:");
+            wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath("//button[@type='submit' and text() = 'Login']")));
+            _test.Info("before Click");
+            _loginButton.Click();
+            Thread.Sleep(5000);
+            wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath("//div[contains(@class, 'shop-menu')]//*[contains(@class,'fa-user')]//following-sibling::b")));
+
+            Assert.IsTrue(Driver.FindElement(By.XPath("//div[contains(@class, 'shop-menu')]//*[contains(@class,'fa-user')]//following-sibling::b")).Text=="vinay");      
+            ////div[contains(@class, 'shop-menu')]//*[contains(@class,'fa-user')]//following-sibling::b
+            _test.Info("after Click");
+            _test.Info("Login Ended");
+            
+        }
+    }
+
+
+
+}
+
+*********************************************************************************
+AutomationexerciseLoginPageBasePage.cs
+
+
+
+using OpenQA.Selenium;
+//using OpenQA.Selenium.Support.PageObjects;
+using SeleniumExtras.PageObjects;
+using AventStack.ExtentReports;
+using MyLibrary.Logging;
+
+namespace MyLibrary.Pages
+{
+    public abstract class AutomationexerciseLoginPageBasePage :Report
+    {
+        protected readonly IWebDriver Driver;
+        //protected readonly ExtentTest Test;
+        protected readonly string BaseURL="https://automationexercise.com/";
+        protected AutomationexerciseLoginPageBasePage(IWebDriver driver)
+        {
+            Driver = driver;
+            //Test = ExtentTestManager.GetCurrentTest();
+            PageFactory.InitElements(driver, this);
+        }
+    }
+}
+
+
+*********************************************
+TestCases
+1) HerokuappPageTests_NewWindow_1
+2) HerokuappPageTests_NewBrowserWindow_1
+3) DemoqaNewWindowPageTests_1
+
+
+MyLibrary.Tests
+HerokuappPageTests.cs
+
+
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using OpenQA.Selenium;
+using OpenQA.Selenium.Chrome;
+using MyLibrary.Pages;
+using System.Runtime.CompilerServices;
+using OpenQA.Selenium.Firefox;
+using OpenQA.Selenium.Edge;
+using System.ComponentModel.DataAnnotations;
+
+namespace MyLibrary.Tests
+{
+    [TestClass]
+    public class HerokuappPageTests : TestBase
+    {
+        
+
+        [TestMethod,Description("HerokuappPageTests_NewWindow_1")]        
+        public void HerokuappPageTests_NewWindow_1()
+        {
+            _test.Info("HerokuappPageTests_NewWindow_1 started");
+
+            var windowPage = new HerokuappWindowPage(_driver);
+            //var newwindowPage = new HerokuappNewWindowPage(_driver);
+
+            //_driver.Navigate().GoToUrl("https://qaportal.synnexb2b.com.au:4443/");
+            windowPage.NavigatetoURL();
+
+            
+
+            // Get the handle of the first tab
+            string firstTabHandle = _driver.CurrentWindowHandle;
+
+
+
+            windowPage.ClickHereLnk();
+            Thread.Sleep(3000);
+            
+            // Get the window handles for all open tabs
+            IList<string> windowHandles = _driver.WindowHandles;
+
+            // Switch to the new tab
+            _driver.SwitchTo().Window(_driver.WindowHandles[1]);
+
+            Thread.Sleep(3000);
+
+            var newwindowPage = new HerokuappNewWindowPage(_driver);
+            newwindowPage.CheckNewWindowText();
+
+            // Switch back to the first tab
+            _driver.SwitchTo().Window(firstTabHandle);
+
+            Thread.Sleep(3000);
+
+            Assert.IsTrue(_driver.FindElement(By.XPath("//h3")).Text=="Opening a new window"); 
+
+             _test.Info("HerokuappPageTests_NewWindow_1 ended without error");
+        }
+
+        [TestMethod,Description("HerokuappPageTests_NewBrowserWindow_1")]        
+        public void HerokuappPageTests_NewBrowserWindow_1()
+        {
+            _test.Info("HerokuappPageTests_NewBrowserWindow_1 started");
+
+            //open a new window
+            var selectorshubDash =new SelectorshubDashBoardPage(_driver);
+            selectorshubDash.NavigatetoURL();
+
+            Thread.Sleep(3000);
+            // Open a new window
+            ((IJavaScriptExecutor)_driver).ExecuteScript("window.open('https://the-internet.herokuapp.com/windows', '_blank');");
+
+            // Get the window handles for all open windows
+            string currentWindowHandle = _driver.CurrentWindowHandle;
+            
+            IList<string> _windowHandles = _driver.WindowHandles;
+
+            foreach (string windowHandle in _driver.WindowHandles)
+            {
+                if (windowHandle != currentWindowHandle)
+                {
+                    Thread.Sleep(3000);
+                    // Switch to the new window
+                    _driver.SwitchTo().Window(windowHandle);
+
+                    var herokuappWindowPage=new HerokuappWindowPage(_driver);
+
+                    herokuappWindowPage.ClickHereLnk();
+                    Thread.Sleep(3000);
+                    // Perform actions on the new window
+                    Console.WriteLine("Title of the new window: " + _driver.Title);
+
+                    // Switch back to the first window
+                    _driver.SwitchTo().Window(currentWindowHandle);
+                    selectorshubDash.DatePicker();
+                    // Perform actions on the first window
+                    Console.WriteLine("Title of the first window: " + _driver.Title);
+                }
+            }
+            IList<string> _windowHandles1 = _driver.WindowHandles;
+            _test.Info("HerokuappPageTests_NewBrowserWindow_1 ended without error");
+
+            IList<string> _windowHandles2 = _driver.WindowHandles;
+        }
+    
+
+        [TestMethod,Description("DemoqaNewWindowPageTests_1")] 
+        public void DemoqaNewWindowPageTests_1()
+        {
+            _test.Info("DemoqaNewWindowPageTests_1 started");
+            var demoqaPage=new DemoqaNewWindowPage(_driver);
+            demoqaPage.NavigatetoURL();
+            demoqaPage.ClickNewWindowButton();
+
+            _test.Info("DemoqaNewWindowPageTests_1 ended without error");
+        }
+
+    }
+}
+    
+
+***************************************************************
+
+MyLibrary-->Herokuapp
+HerokuappWindowPage.cs
+
+
+using OpenQA.Selenium;
+using SeleniumExtras.PageObjects;
+using OpenQA.Selenium.Interactions;
+using OpenQA.Selenium.Support.UI;
+using AventStack.ExtentReports;
+using MyLibrary.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Diagnostics;
+
+
+
+namespace MyLibrary.Pages
+{
+    public class HerokuappWindowPage : HerokuappBasePage
+    {
+        public HerokuappWindowPage(IWebDriver driver) : base(driver)
+        {
+            
+        }
+
+        
+
+         [FindsBy(How = How.XPath, Using = "//a[contains(@href,'/windows/new')]")]
+         private IWebElement LnkClickHere;
+
+       
+        public void NavigatetoURL()
+        {
+            Driver.Navigate().GoToUrl(BaseURL+"windows");
+        }
+        
+        
+        public  void waitForElementtoExixt(IWebDriver driver, By by, int timeoutInSeconds)
+        {
+                var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(timeoutInSeconds));
+                wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(by));
+        }
+    
+
+        
+    
+        public void ClickHereLnk()
+        {
+            _test.Info("ClickHereLnk started");
+            //LogInfo($"Logging in with username: {username} and password: {password}");
+            //_usernameInput.SendKeys(username);
+            //_test.Info("username:"+username);
+            //var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(30));
+            //wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath("//*[@id='pact1']")));
+             //Driver.switchTo().frame("pact1");
+             //Driver.SwitchTo().Frame("pact1");
+             //IJavaScriptExecutor jsExecutor = (IJavaScriptExecutor)Driver;
+            //var currentFrame = jsExecutor.ExecuteScript("return self.id");
+            // _test.Info("IframeID"+ currentFrame);
+             waitForElementtoExixt(Driver,By.XPath("//a[contains(@href,'/windows/new')]"),30);
+             LnkClickHere.Click();
+             //Assert.IsTrue(Driver.FindElement(By.XPath("//*[@id='inp_val']"))!=null);
+             //IWebElement ele= Driver.FindElement(By.XPath("//*[@id='inp_val']"));
+             //ele.SendKeys("vinay");
+             //_test.Info("Found the memory test text box");
+            // memoryTest.SendKeys("Vinay");
+            //SelectItemByText(producstDDL,By.XPath("//a[@class='hfe-menu-item' and contains(text(),'Products')]"),20,"");
+            
+            
+            //Thread.Sleep(5000);
+            //SelectItemByText(ele,"SelectorsHub");
+            _test.Info("ClickHereLnk Ended");
+           // producstDDL
+            //_passwordInput.SendKeys(password);
+            // _test.Info("password:"+password);
+            // //var wait2 = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
+            // wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath("//input[@type='password']")));
+            // _test.Info("after pasword:");
+            // wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath("//button[@type='submit' and text() = 'Login']")));
+            // _test.Info("before Click");
+            // _loginButton.Click();
+            // Thread.Sleep(5000);
+            // wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath("//div[contains(@class, 'shop-menu')]//*[contains(@class,'fa-user')]//following-sibling::b")));
+
+            // Assert.IsTrue(Driver.FindElement(By.XPath("//div[contains(@class, 'shop-menu')]//*[contains(@class,'fa-user')]//following-sibling::b")).Text=="vinay");      
+            // ////div[contains(@class, 'shop-menu')]//*[contains(@class,'fa-user')]//following-sibling::b
+            // _test.Info("after Click");
+            // _test.Info("Login Ended");
+            
+        }
+    }
+
+
+
+}
+
+
+*************************************************
+
+HerokuappNewWindowPage.cs
+
+
+using OpenQA.Selenium;
+using SeleniumExtras.PageObjects;
+using OpenQA.Selenium.Interactions;
+using OpenQA.Selenium.Support.UI;
+using AventStack.ExtentReports;
+using MyLibrary.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Diagnostics;
+
+
+
+namespace MyLibrary.Pages
+{
+    public class HerokuappNewWindowPage : HerokuappBasePage
+    {
+        public HerokuappNewWindowPage(IWebDriver driver) : base(driver)
+        {
+            
+        }
+
+        
+
+         [FindsBy(How = How.XPath, Using = "//*[@class='example']//h3")]
+         private IWebElement NewWindowText;
+
+       
+        public void NavigatetoURL()
+        {
+            Driver.Navigate().GoToUrl(BaseURL+"windows/new");
+        }
+        
+        
+        public  void waitForElementtoExixt(IWebDriver driver, By by, int timeoutInSeconds)
+        {
+                var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(timeoutInSeconds));
+                wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(by));
+        }
+    
+
+        
+    
+        public void CheckNewWindowText()
+        {
+            _test.Info("CheckNewWindowText started");
+            //LogInfo($"Logging in with username: {username} and password: {password}");
+            //_usernameInput.SendKeys(username);
+            //_test.Info("username:"+username);
+            //var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(30));
+            //wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath("//*[@id='pact1']")));
+             //Driver.switchTo().frame("pact1");
+             //Driver.SwitchTo().Frame("pact1");
+             //IJavaScriptExecutor jsExecutor = (IJavaScriptExecutor)Driver;
+            //var currentFrame = jsExecutor.ExecuteScript("return self.id");
+            // _test.Info("IframeID"+ currentFrame);
+             waitForElementtoExixt(Driver,By.XPath("//*[@class='example']//h3"),30);
+             //LnkClickHere.Click();
+             //Assert.IsTrue(Driver.FindElement(By.XPath("//*[@id='inp_val']"))!=null);
+             //IWebElement ele= Driver.FindElement(By.XPath("//*[@id='inp_val']"));
+             //ele.SendKeys("vinay");
+             //_test.Info("Found the memory test text box");
+            // memoryTest.SendKeys("Vinay");
+            //SelectItemByText(producstDDL,By.XPath("//a[@class='hfe-menu-item' and contains(text(),'Products')]"),20,"");
+             Assert.IsTrue(NewWindowText.Text=="New Window");
+            
+            //Thread.Sleep(5000);
+            //SelectItemByText(ele,"SelectorsHub");
+            _test.Info("CheckNewWindowText Ended");
+           // producstDDL
+            //_passwordInput.SendKeys(password);
+            // _test.Info("password:"+password);
+            // //var wait2 = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
+            // wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath("//input[@type='password']")));
+            // _test.Info("after pasword:");
+            // wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath("//button[@type='submit' and text() = 'Login']")));
+            // _test.Info("before Click");
+            // _loginButton.Click();
+            // Thread.Sleep(5000);
+            // wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath("//div[contains(@class, 'shop-menu')]//*[contains(@class,'fa-user')]//following-sibling::b")));
+
+            // Assert.IsTrue(Driver.FindElement(By.XPath("//div[contains(@class, 'shop-menu')]//*[contains(@class,'fa-user')]//following-sibling::b")).Text=="vinay");      
+            // ////div[contains(@class, 'shop-menu')]//*[contains(@class,'fa-user')]//following-sibling::b
+            // _test.Info("after Click");
+            // _test.Info("Login Ended");
+            
+        }
+    }
+
+
+
+}
+
+
+***************************************************
+
+HerokuappBasePage.cs
+
+using OpenQA.Selenium;
+//using OpenQA.Selenium.Support.PageObjects;
+using SeleniumExtras.PageObjects;
+using AventStack.ExtentReports;
+using MyLibrary.Logging;
+
+namespace MyLibrary.Pages
+{
+    public abstract class HerokuappBasePage :Report
+    {
+        protected readonly IWebDriver Driver;
+        //protected readonly ExtentTest Test;
+        protected readonly string BaseURL="https://the-internet.herokuapp.com/";
+        protected HerokuappBasePage(IWebDriver driver)
+        {
+            Driver = driver;
+            //Test = ExtentTestManager.GetCurrentTest();
+            PageFactory.InitElements(driver, this);
+        }
+    }
+}
+
+
+*****************************************************
+
+MyLibrary-->Demoqa
+
+DemoqaNewWindowPage.cs
+
+using OpenQA.Selenium;
+using SeleniumExtras.PageObjects;
+using OpenQA.Selenium.Interactions;
+using OpenQA.Selenium.Support.UI;
+using AventStack.ExtentReports;
+using MyLibrary.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Diagnostics;
+
+
+
+namespace MyLibrary.Pages
+{
+    public class DemoqaNewWindowPage : DemoqaBasePage
+    {
+        public DemoqaNewWindowPage(IWebDriver driver) : base(driver)
+        {
+            
+        }
+
+        
+
+         [FindsBy(How = How.XPath, Using = "//*[@id='windowButton']")]
+         private IWebElement BtnNewWindow;
+
+       
+        public void NavigatetoURL()
+        {
+            Driver.Navigate().GoToUrl(BaseURL+"browser-windows");
+        }
+        
+        
+        public  void waitForElementtoExixt(IWebDriver driver, By by, int timeoutInSeconds)
+        {
+                var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(timeoutInSeconds));
+                wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(by));
+        }
+    
+
+        
+    
+        public void ClickNewWindowButton()
+        {
+            _test.Info("ClickNewWindowButton started");
+
+             
+             waitForElementtoExixt(Driver,By.XPath("//*[@id='windowButton']"),30);
+             BtnNewWindow.Click();
+
+                        // Get the window handles for all open windows
+            string currentWindowHandle = Driver.CurrentWindowHandle;
+            
+            IList<string> _windowHandles = Driver.WindowHandles;
+
+             Driver.SwitchTo().Window(_windowHandles[1]);
+
+            waitForElementtoExixt(Driver,By.XPath("//*[@id='sampleHeading']"),30);
+
+             Assert.IsTrue(Driver.FindElement(By.XPath("//*[@id='sampleHeading']")).Text=="This is a sample page");
+             
+            
+            Thread.Sleep(3000);
+            Driver.SwitchTo().Window(currentWindowHandle);
+
+            waitForElementtoExixt(Driver,By.XPath("//*[@class='main-header']"),30);
+
+            Assert.IsTrue(Driver.FindElement(By.XPath("//*[@class='main-header']")).Text=="Browser Windows");
+            
+            _test.Info("ClickNewWindowButton Ended");
+           
+        }
+    }
+
+
+
+}
+
+********************************************
+DemoqaBasePage.cs
+
+using OpenQA.Selenium;
+//using OpenQA.Selenium.Support.PageObjects;
+using SeleniumExtras.PageObjects;
+using AventStack.ExtentReports;
+using MyLibrary.Logging;
+
+namespace MyLibrary.Pages
+{
+    public abstract class DemoqaBasePage :Report
+    {
+        protected readonly IWebDriver Driver;
+        //protected readonly ExtentTest Test;
+        protected readonly string BaseURL="https://demoqa.com/";
+        protected DemoqaBasePage(IWebDriver driver)
+        {
+            Driver = driver;
+            //Test = ExtentTestManager.GetCurrentTest();
+            PageFactory.InitElements(driver, this);
+        }
+    }
+}
+
+
+**************************************************************8
+
+
+
+
+git pull origin main
+git add .
+git commit -m ""
+git push origin main:regression_qa
+
+Raising PR to merge my remote branch code to main branch in git hub
+
+
+// WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
+
+
+//div[@class='list-prod']//div[contains(@class, 'product-card card')]
+
+
+*******************************************
+
+login test using Selenium, C#, MSTest, PageFactory, VS Code, Extend Reports Logging, and multiple projects for Page Object, tests, and reporting
+ 
+ 
+ 
+ dotnet-test-explorer.testProjectPath
+ "**/*Tests.csproj".
+ 
+ dotnet-test-explorer.autoWatch
+ true
+ 
+ dotnet-test-explorer.testArguments
+ 
+ 
+login test using Selenium, C#, MSTest, PageFactory, VS Code, Extend Reports Logging, and multiple projects for Page Object, tests, and reporting
+ ***********************************************
+ 
+ dotnet new sln
+ dotnet add classlib MyLibrary/MyLibrary.csproj
+ dotnet new classlib -n MyLibrary
+ dotnet new mstest -n MyLibrary.Tests
+ dotnet sln add MyLibrary/MyLibrary.csproj
+ 
+ Library
+ dotnet add package DotNetSeleniumExtras.PageObjects.Core
+ dotnet add package DotNetSeleniumExtras.PageObjects.Core
+ dotnet add package Selenium.WebDriver
+ dotnet add package ExtentReports
+ dotnet add package ExtentReports.Core
+ 
+ Library.Logging
+ dotnet add package MSTest.TestAdapter
+ dotnet add package MSTest.TestFramework
+ 
+ Library
+ dotnet add reference ..\MyLibrary.Logging\MyLibrary.Logging.csproj
+ dotnet add reference ..\MyLibrary\MyLibrary.csproj
+ 
+ Library.Tests
+ dotnet add package Selenium.WebDrive
+ dotnet add reference ..\MyLibrary.Logging\MyLibrary.Logging.csproj
+ dotnet add reference ..\MyLibrary\MyLibrary.csproj
+ 
+ 
+ .vscode/settings.json
+ {
+    
+    "dotnet-test-explorer.testProjectPath":"**/*Tests.csproj",
+    "dotnet-test-explorer.autoWatch": false,
+    
+}
+
+MyLibrary.Tests/appsettings.json
+{
+"BrowserType": "IE"
+}
+
+MyLibrary.Tests.csproj
+<ItemGroup>
+  <None Include="appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  <Content Include="TestResults\**">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <ProjectReference Include="..\MyLibrary.Logging\MyLibrary.Logging.csproj" />
+    <ProjectReference Include="..\MyLibrary\MyLibrary.csproj" />
+  </ItemGroup>
+ 
+ 
+ 
+ ***********************************************************8
+ 
+ 
+ dotnet sln MyLibrary/MyLibrary.csproj.sln add todo-app/todo-app.csproj
+
+PS D:\NewSeleniumProjects\FirstTestSolution\MyLibrary.Tests
+dotnet add MyLibrary/MyLibrary.csproj package Selenium.WebDriver
+dotnet add MyLibrary/MyLibrary.csproj package DotNetSeleniumExtras
+dotnet add MyLibrary/MyLibrary.csproj package DotNetSeleniumExtras
+dotnet test MyLibrary.Tests
+dotnet test --filter "FullyQualifiedName=FirstTestSolution.MyLibrary.Tests.LoginTests.Login_ValidCredentials_Success"
+dotnet test -t -v=q in d:/NewSeleniumProjects/FirstTestSolution/MyLibrary.Tests
+dotnet test --filter "FullyQualifiedName=MyLibrary.Tests.LoginTests.Login_ValidCredentials_Success"
+dotnet test --filter "FullyQualifiedName=MyLibrary.Tests.DashboardTests.Dashboad_Clound_ClickOnProduct"
+dotnet test --filter "FullyQualifiedName=MyLibrary.Tests.UnitTest1.TestAddMethod"
+dotnet test --filter "FullyQualifiedName=MyLibrary.Tests.LoginTests.Login_ValidCredentials_Success" -- --username="username1" --password="password1"
+dotnet test --filter "FullyQualifiedName=MyLibrary.Tests.UnitTest1.TestAddMethod" -- --username="1" --password="2"
+dotnet test --filter "FullyQualifiedName=MyLibrary.Tests.UnitTest1.TestAddMethod" -- --a="1" --b="2"
+dotnet test --filter "FullyQualifiedName=MyLibrary.Tests.UnitTest1.TestAddMethod" -- --1="a" --2="a"
+dotnet test --filter "FullyQualifiedName=MyLibrary.Tests.UnitTest1.TestAddMethod" --a=1 --b=2
+dotnet test --TestRunParameter:username=test --TestRunParameter:password=testpass --filter "FullyQualifiedName=MyLibrary.Tests.LoginTests.Login_ValidCredentials_Success" --TestRunParameter:username=test --TestRunParameter:password=testpass
+--username="username1" --password="password1"
+TestRunParameters.Parameter(name=\"ApiUrl\", value=\"https://newurl\")
+
+modify the above for login test case in .net7, c#, Selenium, mstest,  factory framework login 
+test , read testdata from json file and log as extend report
+To create a login test case in .NET 7 using C#, Selenium, MSTest, and Page Factory framework with reading test data from a JSON file and logging the test results using an Extent Report, follow these steps:
+
+Create a new solution file in Visual Studio Code using the instructions mentioned in the previous answer.
+
+Inside the solution folder, create a new C# class library project for the login functionality. Right-click on the solution folder and select "Add Project". Choose "Class Library" from the C# category and give it a name (e.g., "LoginTestLibrary").
+
+Install the following packages in the class library project using the NuGet Package Manager:
+
+Selenium.WebDriver
+Selenium.WebDriver.ChromeDriver
+MSTest.TestFramework
+Newtonsoft.Json
+ExtentReports
+
+
+***********************************************************************************
